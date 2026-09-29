@@ -21,6 +21,16 @@ app.use(
   }),
 );
 app.use(express.json({ limit: "1mb" }));
+app.get("/", (req, res) =>
+  res.json({
+    success: true,
+    data: {
+      service: "MAMS Asset API",
+      status: "ok",
+      health: "/api/health",
+    },
+  }),
+);
 app.get("/api/health", (req, res) => res.json({ success: true, data: { status: "ok" } }));
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
