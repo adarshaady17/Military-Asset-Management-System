@@ -7,15 +7,18 @@ const userRoutes = require("./routes/userRoutes");
 const resourceRoutes = require("./routes/resourceRoutes");
 const errorMiddleware = require("./middleware/errorMiddleware");
 const app = express();
-const allowedOrigins = env.clientUrl
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const allowedOrigins = new Set([
+  "https://mamfrontend.vercel.app",
+  ...env.clientUrl
+    .split(",")
+    .map((origin) => origin.trim().replace(/\/$/, ""))
+    .filter(Boolean),
+]);
 app.disable("x-powered-by");
 app.use(
   cors({
     origin(origin, callback) {
-      callback(null, !origin || allowedOrigins.includes(origin));
+      callback(null, !origin || allowedOrigins.has(origin));
     },
     credentials: true,
   }),
