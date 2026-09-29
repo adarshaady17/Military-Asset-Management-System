@@ -1,0 +1,37 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+@theme {
+  --color-olive-950: #1f2a1a;
+  --color-olive-900: #2a3823;
+  --color-olive-800: #35482d;
+  --color-olive-700: #48603d;
+  --color-olive-600: #5e754f;
+  --color-paper: #f3f1ea;
+  --color-amber-600: #c58a1a;
+  --color-amber-500: #d29a2c;
+  --color-success-700: #3f6b3a;
+  --color-danger-700: #b23b2e;
+  --color-dark-950: #12160f;
+  --color-dark-900: #1b2117;
+  --font-display: "Rajdhani", "Arial Narrow", sans-serif;
+  --font-sans: "Inter", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --animate-fade-up: fade-up 0.36s ease-out both;
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  --animate-radar: radar 5s ease-in-out infinite;
+  @keyframes radar {
+    50% {
+      opacity: 0.35;
+      transform: scale(0.97);
+    }
+  }
+}
