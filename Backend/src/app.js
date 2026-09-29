@@ -6,6 +6,7 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const userRoutes = require("./routes/userRoutes");
 const resourceRoutes = require("./routes/resourceRoutes");
 const errorMiddleware = require("./middleware/errorMiddleware");
+const { query } = require("./database/postgres");
 const app = express();
 const allowedOrigins = new Set(
   env.clientUrl
@@ -33,7 +34,19 @@ app.get("/", (req, res) =>
     },
   }),
 );
-app.get("/api/health", (req, res) => res.json({ success: true, data: { status: "ok" } }));
+app.get("/api/health", async (req, res) => {
+  try {
+    await query("SELECT 1");
+    res.json({ success: true, data: { status: "ok", database: "connected" } });
+  } catch (error) {
+    console.error("Health check database query failed:", error.message);
+    res.status(503).json({
+      success: false,
+      message: "The API is running, but its database connection is unavailable.",
+      data: { status: "degraded", database: "unavailable" },
+    });
+  }
+});
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/users", userRoutes);

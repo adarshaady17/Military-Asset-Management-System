@@ -96,6 +96,8 @@ export default function Login() {
           <form onSubmit={submit} className="grid gap-5">
             <Field label="Official email">
               <TextInput
+                id="login-email"
+                name="email"
                 autoComplete="username"
                 autoFocus
                 type="email"
@@ -108,6 +110,8 @@ export default function Login() {
             <Field label="Password">
               <span className="relative block">
                 <TextInput
+                  id="login-password"
+                  name="password"
                   className="pr-12"
                   autoComplete="current-password"
                   required
@@ -128,6 +132,8 @@ export default function Login() {
             </Field>
             <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-stone-300">
               <input
+                id="remember-device"
+                name="rememberDevice"
                 type="checkbox"
                 checked={remember}
                 onChange={(e) => setRemember(e.target.checked)}
