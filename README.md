@@ -12,12 +12,6 @@ MAMS is split into `Frontend` (React, Vite, Tailwind CSS) and `Backend` (Express
 
 For a hosted PostgreSQL database, set `DATABASE_URL` to its connection string and `PG_SSL=true` when TLS is required. The demo seed creates the three sample bases and equipment records that populate the selectors. Existing MongoDB records are not copied automatically; seed the SQL database or migrate any records you need before switching users over.
 
-See [Backend/README.md](Backend/README.md) for the API, role boundaries, database schema, and seeding details. The health check is `GET /api/health`.
-
-## Deploy to Vercel
-
-The frontend and API are configured as two separate Vercel projects from this repository. Set each project's Root Directory to `Frontend` or `Backend`, respectively. Follow the deployment and environment-variable guide in [PROJECT_GUIDE.md](PROJECT_GUIDE.md).
-
 ## Modules
 
 - Secure login, administrator-managed user accounts, and role-based navigation
