@@ -16,6 +16,9 @@
     "seed:demo": "node src/utils/seedDemoData.js",
     "check": "node --check src/app.js && node --check src/database/postgres.js"
   },
+  "allowScripts": {
+    "bcrypt@6.0.0": true
+  },
   "type": "commonjs",
   "dependencies": {
     "bcrypt": "^6.0.0",
