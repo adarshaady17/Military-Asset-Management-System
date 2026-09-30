@@ -10,6 +10,9 @@ MAMS is split into `Frontend` (React, Vite, Tailwind CSS) and `Backend` (Express
 4. Start the API from `Backend` with `npm run dev`.
 5. In `Frontend`, run `npm install` and `npm run dev`.
 
+## ADMIN EMAIL=adarsh@unit.mil
+## ADMIN PASSWORD=Adarsh@12
+
 For a hosted PostgreSQL database, set `DATABASE_URL` to its connection string and `PG_SSL=true` when TLS is required. The demo seed creates the three sample bases and equipment records that populate the selectors. Existing MongoDB records are not copied automatically; seed the SQL database or migrate any records you need before switching users over.
 
 ## Modules
