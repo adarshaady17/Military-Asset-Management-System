@@ -1,5 +1,4 @@
 const { query } = require("../database/postgres");
-const { balance, balanceAt } = require("./assetService");
 const resourceService = require("./resourceService");
 
 function validDate(value) {
@@ -53,10 +52,6 @@ async function movement({ baseId, user, from, to, category }) {
 
 exports.summary = async ({ base, user, from, to, category }) => {
   const baseId = user.role === "ADMIN" ? base || null : user.baseId;
-  const basesResult = await query(
-    `SELECT id FROM bases WHERE active = TRUE ${baseId ? "AND id = $1" : ""}`,
-    baseId ? [baseId] : [],
-  );
   const equipmentResult = await query(
     `SELECT id, base_id, opening_balance, category
      FROM equipment WHERE active = TRUE ${category ? "AND category = $1" : ""}`,
@@ -66,23 +61,75 @@ exports.summary = async ({ base, user, from, to, category }) => {
   start.setHours(0, 0, 0, 0);
   const end = validDate(to) || new Date();
   end.setHours(23, 59, 59, 999);
-  const openingCutoff = new Date(start.getTime() - 1);
-
-  let openingBalance = 0;
-  let closingBalance = 0;
-  let assigned = 0;
-  for (const item of equipmentResult.rows) {
-    for (const activeBase of basesResult.rows) {
-      const [opening, closing, current] = await Promise.all([
-        balanceAt(item.id, activeBase.id, openingCutoff),
-        balanceAt(item.id, activeBase.id, end),
-        balance(item.id, activeBase.id),
-      ]);
-      openingBalance += opening;
-      closingBalance += closing;
-      assigned += current.assigned;
-    }
-  }
+  const summaryParams = [start, end];
+  const baseFilter = baseId ? (summaryParams.push(baseId), `AND id = $${summaryParams.length}`) : "";
+  const categoryFilter = category
+    ? (summaryParams.push(category), `AND category = $${summaryParams.length}`)
+    : "";
+  const totalsResult = await query(
+    `WITH active_bases AS (
+       SELECT id FROM bases WHERE active = TRUE ${baseFilter}
+     ), active_equipment AS (
+       SELECT id, base_id, opening_balance
+       FROM equipment WHERE active = TRUE ${categoryFilter}
+     ), scope AS (
+       SELECT e.id AS equipment_id, e.base_id AS equipment_base_id,
+              e.opening_balance, b.id AS base_id
+       FROM active_equipment e CROSS JOIN active_bases b
+     ), purchase_totals AS (
+       SELECT equipment_id, base_id,
+              COALESCE(SUM(quantity) FILTER (WHERE purchase_date < $1), 0) AS before_start,
+              COALESCE(SUM(quantity), 0) AS through_end
+       FROM purchases WHERE purchase_date <= $2
+       GROUP BY equipment_id, base_id
+     ), transfer_in_totals AS (
+       SELECT equipment_id, to_base_id AS base_id,
+              COALESCE(SUM(quantity) FILTER (WHERE transfer_date < $1), 0) AS before_start,
+              COALESCE(SUM(quantity), 0) AS through_end
+       FROM transfers
+       WHERE status = 'COMPLETED' AND transfer_date <= $2
+       GROUP BY equipment_id, to_base_id
+     ), transfer_out_totals AS (
+       SELECT equipment_id, from_base_id AS base_id,
+              COALESCE(SUM(quantity) FILTER (WHERE transfer_date < $1), 0) AS before_start,
+              COALESCE(SUM(quantity), 0) AS through_end
+       FROM transfers
+       WHERE status = 'COMPLETED' AND transfer_date <= $2
+       GROUP BY equipment_id, from_base_id
+     ), expenditure_totals AS (
+       SELECT equipment_id, base_id,
+              COALESCE(SUM(quantity) FILTER (WHERE expenditure_date < $1), 0) AS before_start,
+              COALESCE(SUM(quantity), 0) AS through_end
+       FROM expenditures WHERE expenditure_date <= $2
+       GROUP BY equipment_id, base_id
+     ), assignment_totals AS (
+       SELECT equipment_id, base_id, COALESCE(SUM(quantity), 0) AS assigned
+       FROM assignments WHERE status = 'ACTIVE'
+       GROUP BY equipment_id, base_id
+     )
+     SELECT
+       COALESCE(SUM(
+         CASE WHEN s.equipment_base_id = s.base_id THEN s.opening_balance ELSE 0 END
+         + COALESCE(p.before_start, 0) + COALESCE(ti.before_start, 0)
+         - COALESCE(to_totals.before_start, 0) - COALESCE(x.before_start, 0)
+       ), 0)::bigint AS opening_balance,
+       COALESCE(SUM(
+         CASE WHEN s.equipment_base_id = s.base_id THEN s.opening_balance ELSE 0 END
+         + COALESCE(p.through_end, 0) + COALESCE(ti.through_end, 0)
+         - COALESCE(to_totals.through_end, 0) - COALESCE(x.through_end, 0)
+       ), 0)::bigint AS closing_balance,
+       COALESCE(SUM(COALESCE(a.assigned, 0)), 0)::bigint AS assigned
+     FROM scope s
+     LEFT JOIN purchase_totals p ON p.equipment_id = s.equipment_id AND p.base_id = s.base_id
+     LEFT JOIN transfer_in_totals ti ON ti.equipment_id = s.equipment_id AND ti.base_id = s.base_id
+     LEFT JOIN transfer_out_totals to_totals ON to_totals.equipment_id = s.equipment_id AND to_totals.base_id = s.base_id
+     LEFT JOIN expenditure_totals x ON x.equipment_id = s.equipment_id AND x.base_id = s.base_id
+     LEFT JOIN assignment_totals a ON a.equipment_id = s.equipment_id AND a.base_id = s.base_id`,
+    summaryParams,
+  );
+  const openingBalance = Number(totalsResult.rows[0].opening_balance);
+  const closingBalance = Number(totalsResult.rows[0].closing_balance);
+  const assigned = Number(totalsResult.rows[0].assigned);
 
   const dateFrom = start.toISOString();
   const dateTo = end.toISOString();
